@@ -1,11 +1,10 @@
-
 import streamlit as st
 from tensorflow.keras.models import load_model
 import numpy as np
 from PIL import Image
 
 # Load model
-model = load_model('plant_disease_model_subset.h5')
+model = load_model('plant_disease_model_subset.keras')
 
 # Class labels
 class_labels = [
