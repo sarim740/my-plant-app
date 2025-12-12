@@ -2,11 +2,19 @@ import streamlit as st
 from tensorflow.keras.models import load_model
 import numpy as np
 from PIL import Image
+import os
 
 # Load model
-model = load_model('plant_disease_model_subset.keras')
+model_path = 'plant_disease_model_subset.h5' # Ensure this path is correct
+if not os.path.exists(model_path):
+    st.error(f"Model file not found at: {model_path}")
+    st.stop()
 
-# Class labels
+model = load_model(model_path)
+
+# Class labels - These should match the labels used during training
+# Assuming `class_labels` was defined in a previous cell, I'll hardcode it here based on common PlantVillage dataset labels.
+# In a real scenario, this would be loaded or passed from the training script.
 class_labels = [
     "Apple___Apple_scab",
     "Apple___Black_rot",
@@ -48,22 +56,36 @@ class_labels = [
     "Tomato___healthy"
 ]
 
-st.title("Plant Disease Detection 🌱")
-st.write("Upload a leaf image and the model will predict the disease.")
+img_size = 224 # Assuming image size used for training
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg","jpeg","png"])
+st.title("Plant Disease Prediction")
+st.write("Upload an image of a plant leaf to classify its disease.")
+
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    img = Image.open(uploaded_file).resize((224,224))
-    st.image(img, caption="Uploaded Image", use_column_width=True)
-    
-    img_array = np.array(img)/255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    
-    pred = model.predict(img_array)
-    pred_index = np.argmax(pred)
-    pred_class = class_labels[pred_index]
-    confidence = pred[0][pred_index]
-    
-    st.write(f"Prediction: **{pred_class}**")
-    st.write(f"Confidence: {confidence*100:.2f}%")
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
+    st.write("")
+    st.write("Classifying...")
+
+    # Preprocess the image
+    img = image.resize((img_size, img_size))
+    img_array = np.array(img)
+    img_array = np.expand_dims(img_array, axis=0) # Add batch dimension
+    img_array = img_array / 255.0 # Rescale to [0,1] as done in training
+
+    # Make prediction
+    predictions = model.predict(img_array)
+    predicted_class_index = np.argmax(predictions, axis=1)[0]
+    predicted_class_label = class_labels[predicted_class_index]
+    confidence = np.max(predictions) * 100
+
+    st.success(f"Prediction: {predicted_class_label}")
+    st.write(f"Confidence: {confidence:.2f}%")
+
+    # Optional: Display top N predictions
+    st.subheader("Top 3 Predictions:")
+    top_indices = np.argsort(predictions[0])[::-1][:3]
+    for i in top_indices:
+        st.write(f"- {class_labels[i]}: {predictions[0][i]*100:.2f}%")
