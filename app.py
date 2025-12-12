@@ -6,7 +6,8 @@ import json
 
 @st.cache_resource
 def load_artifacts():
-    model = tf.keras.models.load_model('best_model_subset.h5')
+    # Using the .keras file to avoid H5 compatibility errors
+    model = tf.keras.models.load_model('plant_disease_model_subset.keras')
     with open('class_indices.json', 'r') as f:
         class_names = json.load(f)
     return model, class_names
@@ -20,10 +21,15 @@ if uploaded_file is not None:
     img = Image.open(uploaded_file)
     st.image(img, caption='Uploaded Image', use_container_width=True)
     
+    # Preprocessing
     img_resized = img.resize((224, 224))
     img_array = np.array(img_resized) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
     
+    # Prediction
     predictions = model.predict(img_array)
     result_index = np.argmax(predictions)
-    st.success(f"Prediction: {class_names[result_index]}")
+    confidence = np.max(predictions) * 100
+    
+    st.success(f"Prediction: **{class_names[result_index]}**")
+    st.info(f"Confidence: {confidence:.2f}%")
