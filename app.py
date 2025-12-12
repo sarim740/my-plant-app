@@ -2,38 +2,31 @@ import streamlit as st
 import tensorflow as tf
 from PIL import Image
 import numpy as np
-import json
 
-@st.cache_resource
-def load_artifacts():
-    # Load the universal H5 file
-    model = tf.keras.models.load_model('model.h5', compile=False)
-    with open('class_indices.json', 'r') as f:
-        class_names = json.load(f)
-    return model, class_names
+st.title("🌿 Plant Disease Classifier")
 
-st.title("🌿 Plant Disease Detector")
+# Load the H5 model
+model = tf.keras.models.load_model("model.h5", compile=False)
 
-try:
-    model, class_names = load_artifacts()
+# Replace with your actual class labels
+class_names = [
+    "Apple Scab", "Apple Black Rot", "Apple Cedar Rust", "Apple Healthy",
+    "Blueberry Healthy", "Cherry Powdery Mildew", "Cherry Healthy",
+    # Add all other classes...
+]
+
+def preprocess(img):
+    img = img.resize((224, 224))
+    img_array = np.array(img)/255.0
+    return np.expand_dims(img_array, axis=0)
+
+uploaded_file = st.file_uploader("Upload an image", type=["jpg","png","jpeg"])
+if uploaded_file is not None:
+    img = Image.open(uploaded_file)
+    st.image(img, caption="Uploaded Image", use_column_width=True)
     
-    uploaded_file = st.file_uploader("Upload leaf image", type=["jpg", "png", "jpeg"])
-    if uploaded_file:
-        image = Image.open(uploaded_file)
-        st.image(image, use_container_width=True)
-        
-        # Preprocess
-        img = image.resize((224, 224))
-        img_array = np.array(img).astype('float32') / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        
-        # Predict
-        preds = model.predict(img_array)
-        idx = np.argmax(preds)
-        
-        # Map result
-        result = class_names[str(idx)] if isinstance(class_names, dict) else class_names[idx]
-        st.success(f"Prediction: {result} ({np.max(preds)*100:.2f}%)")
-
-except Exception as e:
-    st.error(f"Model Loading Error: {e}")
+    processed_img = preprocess(img)
+    predictions = model.predict(processed_img)
+    predicted_class = class_names[np.argmax(predictions)]
+    
+    st.write(f"Prediction: **{predicted_class}**")
