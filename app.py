@@ -6,8 +6,13 @@ import json
 
 @st.cache_resource
 def load_artifacts():
-    # Using the .keras file to avoid H5 compatibility errors
-    model = tf.keras.models.load_model('plant_disease_model_subset.keras')
+    # Attempt to load using standard method
+    try:
+        model = tf.keras.models.load_model('plant_disease_model_subset.keras')
+    except Exception:
+        # If standard load fails, try legacy H5 loading
+        model = tf.keras.models.load_model('best_model_subset.h5')
+    
     with open('class_indices.json', 'r') as f:
         class_names = json.load(f)
     return model, class_names
